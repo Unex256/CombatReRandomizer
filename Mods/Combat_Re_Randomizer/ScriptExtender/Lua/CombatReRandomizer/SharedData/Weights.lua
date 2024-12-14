@@ -10,7 +10,8 @@ Data.Weights = {
     SummonSpellChance = 0.4,
     EliteItemDropChance = 1.5,
     SuperEliteItemDropChance = 2.0,
-    UniquePowerScale = 1.0
+    UniquePowerScale = 1.0,
+    ConsumablesMultiplier = 2.0
 }
 
 -- Assigns new weight values from a JSON-like table
