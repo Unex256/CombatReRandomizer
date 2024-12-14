@@ -1,3 +1,4 @@
+local Ext = Ext
 -- Shared data
 local Persistence = Ext.Require("CombatReRandomizer/SharedData/Persistence.lua")
 local RandomizerConfigData = Ext.Require("CombatReRandomizer/SharedData/RandomizerConfig.lua")

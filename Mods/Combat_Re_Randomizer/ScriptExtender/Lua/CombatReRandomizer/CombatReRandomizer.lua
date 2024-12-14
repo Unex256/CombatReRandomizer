@@ -1,3 +1,4 @@
+local Ext = Ext
 local BaseRandomizablesList = Ext.Require("CombatReRandomizer/StaticData/BaseRandomizableLists.lua")
 local StaticLists = Ext.Require("CombatReRandomizer/StaticData/StaticLists.lua")
 
@@ -95,7 +96,9 @@ end
 
 local function addItemsFromJson(sourceTable, targetList, label)
     for _, item in ipairs(sourceTable) do
-        print("Combat ReRandomizer - adding modded " .. label .. ": " .. item)
+        if RandomizerConfig.ConsoleExtraDebug then
+            print("Combat ReRandomizer - adding modded " .. label .. ": " .. item)
+        end
         table.insert(targetList, item)
     end
 end
@@ -210,6 +213,11 @@ end
 
 -- Process and deduplicate spells, replacing them with container spells or root spells if applicable
 local function processRandomizableSpells()
+    if RandomizerConfig.ConsoleExtraDebug then
+        print("-----------------------------------------------")
+        print("Processing randomizable spells")
+    end
+
     -- Replace spells with container or root spells
     for i, spell in ipairs(RandomizablesLists.Spells) do
         local containerSpell = SpellUtils.getSpellContainer(spell)
@@ -243,6 +251,7 @@ local function processRandomizableSpells()
 
     if RandomizerConfig.ConsoleExtraDebug then
         print(#deduplicatedList .. " unique spells are ready to be randomized")
+        print("-----------------------------------------------")
     end
     -- Replace the original list with the deduplicated list
     RandomizablesLists.Spells = deduplicatedList
@@ -914,9 +923,6 @@ end
 
 local function fullyEquipItemForChar(itemId, charId)
     modApi.Equip(charId, itemId)
-    if (RandomizerConfig.ConsoleExtraDebug) then
-        print("Character: " .. parseStringFromGuid(charId) .. " equiped: " .. parseStringFromGuid(itemId))
-    end
 end
 
 Ext.Events.SessionLoaded:Subscribe(onSessionLoaded)
@@ -1188,7 +1194,7 @@ local function removeCharacterSpellFromChar(spell, charId)
             -- Log remaining casts if the spell is not fully removed
             if RandomizerConfig.ConsoleDebug then
                 print("Decrementing spell: " .. spell .. ", for npc: " .. parseStringFromGuid(charId) ..
-                      ". Casts left: " .. characterSpells[charId][spell])
+                    ". Casts left: " .. characterSpells[charId][spell])
             end
         end
     end
