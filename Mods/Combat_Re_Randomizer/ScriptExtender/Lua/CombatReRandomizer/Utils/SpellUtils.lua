@@ -107,6 +107,7 @@ function SpellUtils.addSpellCastToCharacter(charId, spell)
         characterSpells[charId][spell] = 1
         modApi.AddSpell(charId, spell)
     end
+    return characterSpells[charId][spell]
 end
 
 -- Function to add a several spell casts to npc with persistence tracking
@@ -123,6 +124,7 @@ function SpellUtils.addSpellCastsToCharacter(charId, spell, castCount)
         characterSpells[charId][spell] = castCount
         modApi.AddSpell(charId, spell)
     end
+    return characterSpells[charId][spell]
 end
 
 -- Function to add a spell (near infinite casts) to npc with persistence tracking
@@ -154,6 +156,7 @@ function SpellUtils.addSpellCastToPartyMember(charId, spell)
         spellsAddedToParty[charId][spell] = 1
         modApi.AddSpell(charId, spell)
     end
+    return characterSpells[charId][spell]
 end
 
 -- Function to add a several spell casts to a party member with persistence tracking
@@ -169,6 +172,34 @@ function SpellUtils.addSpellCastsToPartyMember(charId, spell, castCount)
         spellsAddedToParty[charId][spell] = castCount
         modApi.AddSpell(charId, spell)
     end
+    return characterSpells[charId][spell]
+end
+
+function SpellUtils.removeSpellCastFromCharacter(charId, spell)
+    if characterSpells[charId] and characterSpells[charId][spell] then
+        -- Decrement the number of casts left
+        characterSpells[charId][spell] = characterSpells[charId][spell] - 1
+        if characterSpells[charId][spell] <= 0 then
+            modApi.RemoveSpell(charId, spell, 1)
+            characterSpells[charId][spell] = nil
+            return nil
+        end
+        return characterSpells[charId][spell]
+    end
+    return nil
+end
+
+function SpellUtils.removeSpellCastFromPartyMember(charId, spell)
+    if spellsAddedToParty[charId] and spellsAddedToParty[charId][spell] then
+        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] - 1
+        if spellsAddedToParty[charId][spell] <= 0 then
+            modApi.RemoveSpell(charId, spell)
+            spellsAddedToParty[charId][spell] = nil
+            return nil
+        end
+        return spellsAddedToParty[charId][spell]
+    end
+    return nil
 end
 
 return SpellUtils

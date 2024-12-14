@@ -1157,45 +1157,38 @@ local function isGivenSpell(spell, charId)
     return characterSpells[charId] and characterSpells[charId][spell]
 end
 
-local function removeAddedPartySpellForChar(spell, charId)
+local function removeSpellCastFromPartyMemberWithLogging(spell, charId)
     if spellsAddedToParty[charId] and spellsAddedToParty[charId][spell] then
-        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] - 1
+        local castsLeft = SpellUtils.removeSpellCastFromPartyMember(charId, spell)
 
-        if spellsAddedToParty[charId][spell] > 0 then
+        if castsLeft then
             if RandomizerConfig.ConsoleDebug then
                 print("Spell: " .. spell .. " for character: " .. parseStringFromGuid(charId) ..
-                    " has " .. spellsAddedToParty[charId][spell] .. " casts left.")
+                    " has " .. castsLeft .. " casts left.")
             end
         else
             if RandomizerConfig.ConsoleDebug then
                 print("Removing spell: " ..
                     spell .. ", after limited casts for character: " .. parseStringFromGuid(charId))
             end
-
-            modApi.RemoveSpell(charId, spell)
-            spellsAddedToParty[charId][spell] = nil
         end
     end
 end
 
 -- Removes spell or decreses cast count of spell for character
-local function removeCharacterSpellFromChar(spell, charId)
+local function removeSpellCastFromCharacter(spell, charId)
     if characterSpells[charId] and characterSpells[charId][spell] then
-        -- Decrement the number of casts left
-        characterSpells[charId][spell] = characterSpells[charId][spell] - 1
-
-        if characterSpells[charId][spell] <= 0 then
-            -- Remove the spell completely if casts reach zero
-            if RandomizerConfig.ConsoleDebug then
-                print("Removing spell: " .. spell .. ", for npc: " .. parseStringFromGuid(charId))
-            end
-            modApi.RemoveSpell(charId, spell, 1)
-            characterSpells[charId][spell] = nil
-        else
+        local castsLeft = SpellUtils.removeSpellCastFromCharacter(charId, spell)
+        if castsLeft then
             -- Log remaining casts if the spell is not fully removed
             if RandomizerConfig.ConsoleDebug then
                 print("Decrementing spell: " .. spell .. ", for npc: " .. parseStringFromGuid(charId) ..
-                    ". Casts left: " .. characterSpells[charId][spell])
+                    ". Casts left: " .. castsLeft)
+            end
+        else
+            -- Remove the spell completely if casts reach zero
+            if RandomizerConfig.ConsoleDebug then
+                print("Removing spell: " .. spell .. ", for npc: " .. parseStringFromGuid(charId))
             end
         end
     end
@@ -1207,14 +1200,14 @@ local function handlePartyMemberCastedSpellEvent(charId, spell)
     if RandomizerConfig.RandomSpellToPartySingleCast then
         if isGivenSpellForPartyMember(spell, charId) then
             local modvars = getModvars()
-            removeAddedPartySpellForChar(spell, charId)
+            removeSpellCastFromPartyMemberWithLogging(spell, charId)
             proccesingNeeded = false
             modvars.party_spells = spellsAddedToParty
         else
             local containerSpell = SpellUtils.getSpellContainer(spell)
             if containerSpell and containerSpell ~= "" then
                 local modvars = getModvars()
-                removeAddedPartySpellForChar(containerSpell, charId)
+                removeSpellCastFromPartyMemberWithLogging(containerSpell, charId)
                 proccesingNeeded = false
                 modvars.party_spells = spellsAddedToParty
             end
@@ -1222,7 +1215,7 @@ local function handlePartyMemberCastedSpellEvent(charId, spell)
     end
     if proccesingNeeded and RandomizerConfig.ActAsNpcDebug and isGivenSpell(spell, charId) then
         local modvars = getModvars()
-        removeCharacterSpellFromChar(spell, charId)
+        removeSpellCastFromCharacter(spell, charId)
         modvars.character_spells = characterSpells
     end
 end
@@ -1230,13 +1223,13 @@ end
 local function handleNpcCastedSpellEvent(charId, spell)
     if isGivenSpell(spell, charId) then
         local modvars = getModvars()
-        removeCharacterSpellFromChar(spell, charId)
+        removeSpellCastFromCharacter(spell, charId)
         modvars.character_spells = characterSpells
     else
         local containerSpell = SpellUtils.getSpellContainer(spell)
         if containerSpell and containerSpell ~= "" then
             local modvars = getModvars()
-            removeCharacterSpellFromChar(containerSpell, charId)
+            removeSpellCastFromCharacter(containerSpell, charId)
             modvars.character_spells = characterSpells
         end
     end
@@ -1250,5 +1243,13 @@ Ext.Osiris.RegisterListener("CastedSpell", 5, "after", function(casterId, spell,
         handlePartyMemberCastedSpellEvent(casterId, spell)
     elseif isRandomizedChar(casterId) then
         handleNpcCastedSpellEvent(casterId, spell)
+         -- Check for "_AI" suffix and rerun with stripped spell if necessary
+         if spell:sub(-3) == "_AI" then
+            local originalSpell = spell:sub(1, -4) -- Remove "_AI" from the end
+            if RandomizerConfig.ConsoleDebug then
+                print("Detected _AI suffix. Rerunning with spell: ", originalSpell)
+            end
+            handleNpcCastedSpellEvent(casterId, originalSpell)
+        end
     end
 end)

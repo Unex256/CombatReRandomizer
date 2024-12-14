@@ -132,6 +132,15 @@ local function applyStatuses(charId, statuses)
         if status.type then
             local duration = (status.duration and status.duration * 6) or -1
             modApi.ApplyStatus(charId, status.type, duration)
+            if RandomizerConfig.ConsoleDebug then
+                local durationDebug
+                if duration < 0 then
+                    durationDebug = "Permament"
+                else
+                    durationDebug = duration .. " turns"
+                end
+                print("Applying status: " .. status.type .. " for: " .. durationDebug)
+            end
         end
     end
 end
@@ -149,9 +158,17 @@ local function giveSpells(charId, spells)
     for _, spellData in ipairs(spells) do
         if spellData.spell then
             if spellData.casts then
-                SpellUtils.addSpellCastsToCharacter(charId, spellData.spell, spellData.casts)
+                local spellCasts = SpellUtils.addSpellCastsToCharacter(charId, spellData.spell, spellData.casts)
+                if RandomizerConfig.ConsoleDebug then
+                    print("Spell: " .. spellData.spell .. " Current casts: " .. spellCasts)
+                end
             else
                 SpellUtils.addSpellToCharacter(charId, spellData.spell)
+                if RandomizerConfig.ConsoleDebug then
+                    if RandomizerConfig.ConsoleDebug then
+                        print("Spell: " .. spellData.spell .. " Current casts: LOTS")
+                    end
+                end
             end
         end
     end
@@ -253,26 +270,40 @@ local function validateSpellContainers(uniqueTypes)
             for _, spellData in ipairs(uniqueData.spells) do
                 local containerSpell = SpellUtils.getSpellContainer(spellData.spell)
                 if containerSpell and containerSpell ~= "" then
-                    table.insert(updatedSpells, containerSpell)
+                    -- Replace with container spell and retain casts
+                    table.insert(updatedSpells, {
+                        spell = containerSpell,
+                        casts = spellData.casts
+                    })
                     if RandomizerConfig.ConsoleDebug then
-                        print("Spell: ".. spellData.spell .." added to unique type: " .. uniqueType
-                         .. "was replaced with container spell: " .. containerSpell)
-                         print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                        print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                              " was replaced with container spell: " .. containerSpell)
+                        print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
                     end
                 else
                     local rootSpell = SpellUtils.getRootSpell(spellData.spell)
                     if rootSpell then
-                        table.insert(updatedSpells, rootSpell)
+                        -- Keep the root spell with its structure
+                        table.insert(updatedSpells, {
+                            spell = rootSpell,
+                            casts = spellData.casts
+                        })
                         if RandomizerConfig.ConsoleExtraDebug then
-                            print("Spell: ".. spellData.spell .." added to unique type: " .. uniqueType
-                         .. "was replaced with root spell: " .. rootSpell)
-                         print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                            print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                                  " was replaced with root spell: " .. rootSpell)
+                            print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
                         end
                     else
-                        table.insert(updatedSpells, spellData.spell)
+                        -- Keep the original spell as a fallback
+                        table.insert(updatedSpells, spellData)
+                        if RandomizerConfig.ConsoleExtraDebug then
+                            print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                                  " was kept unchanged.")
+                        end
                     end
                 end
             end
+            -- Update the spells for the unique type
             uniqueTypes[uniqueType].spells = updatedSpells
         end
     end
@@ -280,10 +311,11 @@ local function validateSpellContainers(uniqueTypes)
 end
 
 
+
+
 function UniqueEnemiesModule.parseUniques(uniquesJson)
     local uniqueTypes = JsonConverter(uniquesJson)
     uniqueTypes = validateSpellContainers(uniqueTypes)
-
     -- Assign to UniqueTypes if it is successfully converted
     if uniqueTypes then
         UniqueTypes = uniqueTypes

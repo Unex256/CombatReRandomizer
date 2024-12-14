@@ -127,14 +127,14 @@ local function validateAndConvert(jsonData)
         if uniqueData.spells then
             for _, spellData in ipairs(uniqueData.spells) do
                 if not spellData.spell then
-                    logErrorAndSkip("spellData.type")
+                    logErrorAndSkip("spellData.spell")
                     goto continue
                 end
                 if spellData.casts ~= nil and (type(spellData.casts) ~= "number" or spellData.casts < 0) then
                     logErrorAndSkip("spells.casts", "must be a positive number or nothing(infinite)")
                     goto continue
                 end
-                table.insert(converted.statuses, {
+                table.insert(converted.spells, {
                     spell = spellData.spell,
                     casts = default(spellData.casts, nil)
                 })
