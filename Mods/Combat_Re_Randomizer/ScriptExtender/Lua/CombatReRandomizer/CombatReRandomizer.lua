@@ -13,6 +13,7 @@ local baseUniquesFile = Ext.Require("CombatReRandomizer/StaticData/ReRandomizerB
 local ApiWrapper = Ext.Require("CombatReRandomizer/Utils/ApiWrapper.lua")
 local BoostUtils = Ext.Require("CombatReRandomizer/Utils/BoostUtils.lua")
 local MathUtils = Ext.Require("CombatReRandomizer/Utils/MathUtils.lua")
+local SpellUtils = Ext.Require("CombatReRandomizer/Utils/SpellUtils.lua")
 
 -- Shared data
 local Persistence = Ext.Require("CombatReRandomizer/SharedData/Persistence.lua")
@@ -179,86 +180,6 @@ local function contains(table, element)
     return false
 end
 
-local function split(input, separator)
-    local result = {}
-    for match in (input .. separator):gmatch("(.-)" .. separator) do
-        table.insert(result, match)
-    end
-    return result
-end
-
--- Stats:
-
--- Spells
-local function getSpellContainer(spell)
-    local spellData = Ext.Stats.Get(spell, nil, false)
-    if spellData and spellData.SpellContainerID ~= "" then
-        if RandomizerConfig.ConsoleExtraDebug then
-            print("Spell has a container: " .. spellData.SpellContainerID)
-        end
-        return spellData.SpellContainerID
-    end
-    return "" -- Return an empty string if there's no container or spell doesn't exist
-end
-
--- Function to check if a spell is a root spell
-local function getRootSpell(spell)
-    local spellData = Ext.Stats.Get(spell, nil, false)
-    if spellData and (not spellData.RootSpellID or spellData.RootSpellID == "") then
-        if RandomizerConfig.ConsoleExtraDebug then
-            print("Spell is a root spell: " .. spell)
-        end
-        return true
-    end
-    return false -- Returns false if it's not a root spell or spell doesn't exist
-end
-
--- Helper function to check if a functor has summoning properties
-local function isSummoningProperty(functor)
-    return functor.TypeId == "Summon" or functor.TypeId == "Spawn"
-end
-
-
--- Helper function to check if any of the spell's properties meet summoning conditions
-local function hasSummoningProperties(spellData)
-    if spellData and spellData.SpellProperties then
-        for _, property in pairs(spellData.SpellProperties) do
-            if property.Functors then
-                for _, functor in pairs(property.Functors) do
-                    if isSummoningProperty(functor) then
-                        return true
-                    end
-                end
-            end
-        end
-    end
-    return false
-end
-
--- Main function to check if a spell or any of its container spells are summoning spells
-local function isSummoningSpell(spell)
-    local spellData = Ext.Stats.Get(spell)
-
-    -- Step 1: Check the main spell for summoning properties
-    if hasSummoningProperties(spellData) then
-        return true
-    end
-
-    -- Step 2: If the spell is a container, check each contained spell
-    if spellData and spellData.ContainerSpells then
-        -- Split the "ContainerSpells" string into individual spells
-        local containerSpells = split(spellData.ContainerSpells, ";")
-        for _, containedSpell in ipairs(containerSpells) do
-            local containedSpellData = Ext.Stats.Get(containedSpell)
-            if hasSummoningProperties(containedSpellData) then
-                return true
-            end
-        end
-    end
-
-    return false
-end
-
 local function reApplyNonPersistentBoosts()
     for charId, boosts in pairs(characterBoosts) do
         for _, boost in ipairs(boosts) do
@@ -291,11 +212,22 @@ end
 local function processRandomizableSpells()
     -- Replace spells with container or root spells
     for i, spell in ipairs(RandomizablesLists.Spells) do
-        local containerSpell = getSpellContainer(spell)
+        local containerSpell = SpellUtils.getSpellContainer(spell)
         if containerSpell and containerSpell ~= "" then
             RandomizablesLists.Spells[i] = containerSpell -- Replace with container spell
-        elseif getRootSpell(spell) then
-            RandomizablesLists.Spells[i] = spell          -- Keep only if it's a root spell
+            if RandomizerConfig.ConsoleExtraDebug then
+                print(containerSpell .. " was found as container spell for: " .. spell)
+            end
+        else
+            local rootSpell = SpellUtils.getRootSpell(spell)
+            if rootSpell then
+                RandomizablesLists.Spells[i] = rootSpell -- Replace with root spell
+                if RandomizerConfig.ConsoleExtraDebug then
+                    print(rootSpell .. " was found as root spell for: " .. spell)
+                end
+            else
+                RandomizablesLists.Spells[i] = spell
+            end
         end
     end
 
@@ -764,7 +696,7 @@ local function getValidSpell(disallowSummonSpells)
     repeat
         spell = getRandomItemFromList(RandomizablesLists.Spells)
         attempts = attempts + 1
-    until (spell and (not disallowSummonSpells or not isSummoningSpell(spell))) or attempts >= MAX_ATTEMPTS
+    until (spell and (not disallowSummonSpells or not SpellUtils.isSummoningSpell(spell))) or attempts >= MAX_ATTEMPTS
 
     if attempts >= MAX_ATTEMPTS then
         if RandomizerConfig.ConsoleDebug then
@@ -788,24 +720,10 @@ local function giveSpells(charId, multiplierOption)
             print("Giving " .. numSpellsToAdd .. " spell(s) to NPC: " .. parseStringFromGuid(charId))
         end
 
-        -- Initialize characterSpells[charId] if it doesn't exist
-        if not characterSpells[charId] then
-            characterSpells[charId] = {}
-        end
-
         for i = 1, numSpellsToAdd do
             local randomSpell = getValidSpell(disallowSummonSpells)
-
             if randomSpell then
-                if characterSpells[charId][randomSpell] then
-                    -- Increment casts if the spell is already present
-                    characterSpells[charId][randomSpell] = characterSpells[charId][randomSpell] + 1
-                else
-                    -- Add new spell with 1 cast
-                    characterSpells[charId][randomSpell] = 1
-                    modApi.AddSpell(charId, randomSpell)
-                end
-
+                SpellUtils.addSpellCastToCharacter(charId, randomSpell)
                 if RandomizerConfig.ConsoleDebug then
                     print("Giving spell to: " .. parseStringFromGuid(charId) ..
                         " spell: " .. randomSpell .. " (casts left: " .. characterSpells[charId][randomSpell] .. ")")
@@ -1286,7 +1204,7 @@ local function handlePartyMemberCastedSpellEvent(charId, spell)
             proccesingNeeded = false
             modvars.party_spells = spellsAddedToParty
         else
-            local containerSpell = getSpellContainer(spell)
+            local containerSpell = SpellUtils.getSpellContainer(spell)
             if containerSpell and containerSpell ~= "" then
                 local modvars = getModvars()
                 removeAddedPartySpellForChar(containerSpell, charId)
@@ -1308,7 +1226,7 @@ local function handleNpcCastedSpellEvent(charId, spell)
         removeCharacterSpellFromChar(spell, charId)
         modvars.character_spells = characterSpells
     else
-        local containerSpell = getSpellContainer(spell)
+        local containerSpell = SpellUtils.getSpellContainer(spell)
         if containerSpell and containerSpell ~= "" then
             local modvars = getModvars()
             removeCharacterSpellFromChar(containerSpell, charId)
