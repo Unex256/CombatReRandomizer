@@ -245,8 +245,43 @@ function UniqueEnemiesModule.applyUniqueModifiers(charId)
     return currentUniques
 end
 
+local function validateSpellContainers(uniqueTypes)
+    for uniqueType, uniqueData in pairs(uniqueTypes) do
+        if uniqueData.spells then
+            local updatedSpells = {}
+            for _, spellData in ipairs(uniqueData.spells) do
+                local containerSpell = SpellUtils.getSpellContainer(spellData.spell)
+                if containerSpell and containerSpell ~= "" then
+                    table.insert(updatedSpells, containerSpell)
+                    if RandomizerConfig.ConsoleDebug then
+                        print("Spell: ".. spellData.spell .." added to unique type: " .. uniqueType
+                         .. "was replaced with container spell: " .. containerSpell)
+                         print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                    end
+                else
+                    local rootSpell = SpellUtils.getRootSpell(spellData.spell)
+                    if rootSpell then
+                        table.insert(updatedSpells, rootSpell)
+                        if RandomizerConfig.ConsoleExtraDebug then
+                            print("Spell: ".. spellData.spell .." added to unique type: " .. uniqueType
+                         .. "was replaced with root spell: " .. rootSpell)
+                         print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                        end
+                    else
+                        table.insert(updatedSpells, spellData.spell)
+                    end
+                end
+            end
+            uniqueTypes[uniqueType].spells = updatedSpells
+        end
+    end
+    return uniqueTypes
+end
+
+
 function UniqueEnemiesModule.parseUniques(uniquesJson)
     local uniqueTypes = JsonConverter(uniquesJson)
+    uniqueTypes = validateSpellContainers(uniqueTypes)
 
     -- Assign to UniqueTypes if it is successfully converted
     if uniqueTypes then
