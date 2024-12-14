@@ -10,7 +10,7 @@ function MathUtils.getRandomNumber0to100()
     return math.random() * 100.0  -- Generates a float between 0 and 100
 end
 
--- Checks if the given number is greater or equal to a random floating point number between 1 and 100
+-- Checks if the given number is greater or equal to a random floating point number between 0 and 100
 function MathUtils.isGreaterOrEqualThanRandom(num)
     local randomNum = MathUtils.getRandomNumber0to100()
     return num >= randomNum
