@@ -10,6 +10,7 @@ local RandomizerConfig = RandomizerConfigData.RandomizerConfig
 -- Utils
 local BoostUtils = Ext.Require("CombatReRandomizer/Utils/BoostUtils.lua")
 local MathUtils = Ext.Require("CombatReRandomizer/Utils/MathUtils.lua")
+local SpellUtils = Ext.Require("CombatReRandomizer/Utils/SpellUtils.lua")
 
 -- Json validator/converter
 local JsonConverter = Ext.Require("CombatReRandomizer/UniqueEnemies/JsonValidator.lua")
@@ -17,6 +18,9 @@ local JsonConverter = Ext.Require("CombatReRandomizer/UniqueEnemies/JsonValidato
 local UniqueEnemiesModule = {}
 
 local modApi = {}
+
+-- Persistence: Local lists
+local characterSpells = Persistence.characterSpells
 
 -- Set up BoostUtils with the wrapped modApi
 function UniqueEnemiesModule.initialize(wrappedModApi)
@@ -140,7 +144,15 @@ end
         ]
 ]]
 local function giveSpells(charId, spells)
-    
+    for _, spellData in ipairs(spells) do
+        if spellData.spell then
+            if spellData.casts then
+                SpellUtils.addSpellCastsToCharacter(charId, spellData.spell, spellData.casts)
+            else
+                SpellUtils.addSpellToCharacter(charId, spellData.spell)
+            end
+        end
+    end
 end
 
 -- Function to apply a single unique type (buffs, boosts etc.) to a character

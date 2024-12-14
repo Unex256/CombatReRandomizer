@@ -41,6 +41,10 @@ local baseUniques = [[{
         "statuses": [
           { "type": "UncannyDodge", "duration": 6 }
         ],
+        "spells": [
+          { "spell": "Projectile_MagicMissile", "casts": 3 },
+          { "spell": "Shout_Blur" }
+        ],
         "whitelist": ["Celestial Shield"],
         "blacklist": [],
         "weight": 60

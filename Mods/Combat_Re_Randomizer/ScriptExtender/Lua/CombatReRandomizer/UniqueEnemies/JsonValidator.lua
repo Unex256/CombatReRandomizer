@@ -14,6 +14,7 @@ local function validateAndConvert(jsonData)
         local converted = {
             boosts = {},
             statuses = {},
+            spells = {},
             blacklist = {},
             whitelist = {},
             weight = weightValue and math.max(weightValue, 1) or 100
@@ -118,6 +119,24 @@ local function validateAndConvert(jsonData)
                 table.insert(converted.statuses, {
                     type = status.type,
                     duration = default(status.duration, -1)
+                })
+            end
+        end
+
+        -- Validate and convert spells
+        if uniqueData.spells then
+            for _, spellData in ipairs(uniqueData.spells) do
+                if not spellData.spell then
+                    logErrorAndSkip("spellData.type")
+                    goto continue
+                end
+                if spellData.casts ~= nil and (type(spellData.casts) ~= "number" or spellData.casts < 0) then
+                    logErrorAndSkip("spells.casts", "must be a positive number or nothing(infinite)")
+                    goto continue
+                end
+                table.insert(converted.statuses, {
+                    spell = spellData.spell,
+                    casts = default(spellData.casts, nil)
                 })
             end
         end
