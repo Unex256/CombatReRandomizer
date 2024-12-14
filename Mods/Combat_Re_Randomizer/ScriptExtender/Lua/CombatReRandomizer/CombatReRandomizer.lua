@@ -1,6 +1,6 @@
 local BaseRandomizablesList = Ext.Require("CombatReRandomizer/StaticData/BaseRandomizableLists.lua")
 local StaticLists = Ext.Require("CombatReRandomizer/StaticData/StaticLists.lua")
-
+-- Module required for randomization of unique enemies
 local UniqueEnemiesModule = Ext.Require("CombatReRandomizer/UniqueEnemies/UniqueEnemies.lua")
 
 -- Base user interactable files

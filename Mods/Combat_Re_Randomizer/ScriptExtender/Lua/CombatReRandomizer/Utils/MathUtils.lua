@@ -1,6 +1,6 @@
 local MathUtils = {}
 
--- Seeds the random number generator. Call this once at the start of your program for better randomness.
+-- Seeds the random number generator. Call this once at the start of your program for better randomness
 function MathUtils.seedRandom()
     math.randomseed(os.time())
 end
