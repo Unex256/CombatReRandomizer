@@ -34,7 +34,7 @@ end
 -- Function to return root spell if it exists
 function SpellUtils.getRootSpell(spell)
     local spellData = Ext.Stats.Get(spell, nil, false)
-    if spellData and (not spellData.RootSpellID or spellData.RootSpellID == "") then
+    if spellData and (spellData.RootSpellID and not spellData.RootSpellID == "") then
         return spellData.RootSpellID
     end
     return nil -- Returns false if it's not a root spell or spell doesn't exist
