@@ -1,4 +1,3 @@
-local Ext = Ext
 local BaseRandomizablesList = Ext.Require("CombatReRandomizer/StaticData/BaseRandomizableLists.lua")
 local StaticLists = Ext.Require("CombatReRandomizer/StaticData/StaticLists.lua")
 
