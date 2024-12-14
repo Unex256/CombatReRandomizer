@@ -265,6 +265,7 @@ local function onSessionLoaded()
     print("CombatReRandomizer ver. 0.7.1 initialization")
     ApiWrapper.initializeModApi(modApi)
     BoostUtils.initialize(modApi)
+    SpellUtils.initialize(modApi)
     UniqueEnemiesModule.initialize(modApi)
 
     local modvars = getModvars()

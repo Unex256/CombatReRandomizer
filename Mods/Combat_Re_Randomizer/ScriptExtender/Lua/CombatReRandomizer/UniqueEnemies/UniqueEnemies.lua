@@ -27,6 +27,7 @@ local characterSpells = Persistence.characterSpells
 function UniqueEnemiesModule.initialize(wrappedModApi)
     modApi = wrappedModApi
     BoostUtils.initialize(wrappedModApi)
+    SpellUtils.initialize(wrappedModApi)
 end
 
 -- Define unique types with dictionary-based whitelist and blacklist
