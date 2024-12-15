@@ -4,13 +4,8 @@ local SpellUtils = {}
 
 local modApi = {}
 
--- Persistence: Local lists
-local characterSpells = Persistence.characterSpells
-local spellsAddedToParty = Persistence.spellsAddedToParty
-
--- Set up BoostUtils with the wrapped modApi
 function SpellUtils.initialize(wrappedModApi)
-    modApi = wrappedModApi  -- Store the reference to modApi in a local variable
+    modApi = wrappedModApi  -- Store the mod API reference
 end
 
 -- Spells
@@ -96,108 +91,108 @@ end
 -- Function to add a single spell cast to npc with persistence tracking
 function SpellUtils.addSpellCastToCharacter(charId, spell)
     -- Initialize characterSpells[charId] if it doesn't exist
-    if not characterSpells[charId] then
-        characterSpells[charId] = {}
+    if not Persistence.characterSpells[charId] then
+        Persistence.characterSpells[charId] = {}
     end
-    if characterSpells[charId][spell] then
+    if Persistence.characterSpells[charId][spell] then
         -- Increment casts if the spell is already present
-        characterSpells[charId][spell] = characterSpells[charId][spell] + 1
+        Persistence.characterSpells[charId][spell] = Persistence.characterSpells[charId][spell] + 1
     else
         -- Add new spell with 1 cast
-        characterSpells[charId][spell] = 1
+        Persistence.characterSpells[charId][spell] = 1
         modApi.AddSpell(charId, spell)
     end
-    return characterSpells[charId][spell]
+    return Persistence.characterSpells[charId][spell]
 end
 
 -- Function to add a several spell casts to npc with persistence tracking
 function SpellUtils.addSpellCastsToCharacter(charId, spell, castCount)
     -- Initialize characterSpells[charId] if it doesn't exist
-    if not characterSpells[charId] then
-        characterSpells[charId] = {}
+    if not Persistence.characterSpells[charId] then
+        Persistence.characterSpells[charId] = {}
     end
-    if characterSpells[charId][spell] then
+    if Persistence.characterSpells[charId][spell] then
         -- Increment casts if the spell is already present
-        characterSpells[charId][spell] = characterSpells[charId][spell] + castCount
+        Persistence.characterSpells[charId][spell] = Persistence.characterSpells[charId][spell] + castCount
     else
         -- Add new spell with given cast count
-        characterSpells[charId][spell] = castCount
+        Persistence.characterSpells[charId][spell] = castCount
         modApi.AddSpell(charId, spell)
     end
-    return characterSpells[charId][spell]
+    return Persistence.characterSpells[charId][spell]
 end
 
 -- Function to add a spell (near infinite casts) to npc with persistence tracking
 function SpellUtils.addSpellToCharacter(charId, spell)
     -- Initialize characterSpells[charId] if it doesn't exist
-    if not characterSpells[charId] then
-        characterSpells[charId] = {}
+    if not Persistence.characterSpells[charId] then
+        Persistence.characterSpells[charId] = {}
     end
-    if characterSpells[charId][spell] then
+    if Persistence.characterSpells[charId][spell] then
         -- Rewrite to near infinite casts if it already has some
-        characterSpells[charId][spell] = 9001
+        Persistence.characterSpells[charId][spell] = 9001
     else
         -- Add new spell with near infinite casts
-        characterSpells[charId][spell] = 9001
+        Persistence.characterSpells[charId][spell] = 9001
         modApi.AddSpell(charId, spell)
     end
 end
 
 -- Function to add a single spell cast to a party member with persistence tracking
 function SpellUtils.addSpellCastToPartyMember(charId, spell)
-    if not spellsAddedToParty[charId] then
-        spellsAddedToParty[charId] = {}
+    if not Persistence.spellsAddedToParty[charId] then
+        Persistence.spellsAddedToParty[charId] = {}
     end
-    if spellsAddedToParty[charId][spell] then
+    if Persistence.spellsAddedToParty[charId][spell] then
         -- Increment casts left if the spell is already added
-        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] + 1
+        Persistence.spellsAddedToParty[charId][spell] = Persistence.spellsAddedToParty[charId][spell] + 1
     else
         -- Add new spell with 1 cast
-        spellsAddedToParty[charId][spell] = 1
+        Persistence.spellsAddedToParty[charId][spell] = 1
         modApi.AddSpell(charId, spell)
     end
-    return characterSpells[charId][spell]
+    return Persistence.spellsAddedToParty[charId][spell]
 end
 
 -- Function to add a several spell casts to a party member with persistence tracking
 function SpellUtils.addSpellCastsToPartyMember(charId, spell, castCount)
-    if not spellsAddedToParty[charId] then
-        spellsAddedToParty[charId] = {}
+    if not Persistence.spellsAddedToParty[charId] then
+        Persistence.spellsAddedToParty[charId] = {}
     end
-    if spellsAddedToParty[charId][spell] then
+    if Persistence.spellsAddedToParty[charId][spell] then
         -- Increment casts left if the spell is already added
-        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] + castCount
+        Persistence.spellsAddedToParty[charId][spell] = Persistence.spellsAddedToParty[charId][spell] + castCount
     else
         -- Add new spell with given cast count
-        spellsAddedToParty[charId][spell] = castCount
+        Persistence.spellsAddedToParty[charId][spell] = castCount
         modApi.AddSpell(charId, spell)
     end
-    return characterSpells[charId][spell]
+    return Persistence.spellsAddedToParty[charId][spell]
 end
 
 function SpellUtils.removeSpellCastFromCharacter(charId, spell)
-    if characterSpells[charId] and characterSpells[charId][spell] then
+    if Persistence.characterSpells[charId] and Persistence.characterSpells[charId][spell] then
         -- Decrement the number of casts left
-        characterSpells[charId][spell] = characterSpells[charId][spell] - 1
-        if characterSpells[charId][spell] <= 0 then
+        Persistence.characterSpells[charId][spell] = Persistence.characterSpells[charId][spell] - 1
+        if Persistence.characterSpells[charId][spell] <= 0 then
             modApi.RemoveSpell(charId, spell, 1)
-            characterSpells[charId][spell] = nil
+            Persistence.characterSpells[charId][spell] = nil
             return nil
         end
-        return characterSpells[charId][spell]
+        return Persistence.characterSpells[charId][spell]
     end
     return nil
 end
 
 function SpellUtils.removeSpellCastFromPartyMember(charId, spell)
-    if spellsAddedToParty[charId] and spellsAddedToParty[charId][spell] then
-        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] - 1
-        if spellsAddedToParty[charId][spell] <= 0 then
+    if Persistence.spellsAddedToParty[charId] and Persistence.spellsAddedToParty[charId][spell] then
+        Persistence.spellsAddedToParty[charId][spell] = Persistence.spellsAddedToParty[charId][spell] - 1
+        if Persistence.spellsAddedToParty[charId][spell] <= 0 then
             modApi.RemoveSpell(charId, spell)
-            spellsAddedToParty[charId][spell] = nil
+            Persistence.spellsAddedToParty[charId][spell] = nil
             return nil
         end
-        return spellsAddedToParty[charId][spell]
+        return Persistence.spellsAddedToParty[charId][spell]
     end
     return nil
 end
