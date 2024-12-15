@@ -1,6 +1,6 @@
 local BaseRandomizablesList = Ext.Require("CombatReRandomizer/StaticData/BaseRandomizableLists.lua")
 local StaticLists = Ext.Require("CombatReRandomizer/StaticData/StaticLists.lua")
-
+-- Module required for randomization of unique enemies
 local UniqueEnemiesModule = Ext.Require("CombatReRandomizer/UniqueEnemies/UniqueEnemies.lua")
 
 -- Base user interactable files
@@ -428,7 +428,8 @@ local function getConstrainedRandomness(multiplierOption)
     return math.random(0, multiplier * RandomizerConfig.Randomness)
 end
 
-local function getMutiplicationDegree(multiplierOption)
+--Will return a number between 0 and multiplierOption(default = 2) * Randomness/100
+local function getAdditionalStrengthMultiplier(multiplierOption)
     return getConstrainedRandomness(multiplierOption) / 100.0
 end
 
@@ -471,7 +472,9 @@ end
 
 local function giveConsumables(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.Consumables) then
-        local numConsumablesToAdd = MathUtils.mathRound(getMutiplicationDegree(multiplierOption))
+        local consumablesMultiplier = Weights.ConsumablesMultiplier or 2
+        local numConsumablesToAdd = (1 + MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption))) *
+        consumablesMultiplier
         for i = 1, numConsumablesToAdd do
             local rndItem = getRandomItemFromList(RandomizablesLists.Consumables)
             addItemToCharacter(rndItem, charId)
@@ -583,7 +586,7 @@ local function giveActionResource(charId, resourceName, minDefault, multiplierOp
     if not baseValue or baseValue < minDefault then
         baseValue = minDefault
     end
-    local extraValue = MathUtils.mathRound(baseValue * getMutiplicationDegree(multiplierOption) * localWeight)
+    local extraValue = MathUtils.mathRound(baseValue * getAdditionalStrengthMultiplier(multiplierOption) * localWeight)
     if RandomizerConfig.ConsoleDebug then
         print("Giving: " .. extraValue .. " " .. (debugName or resourceName))
     end
@@ -664,7 +667,8 @@ local function giveAbilities(charId, attributeName, multiplierOption)
     if not baseValue or baseValue < minDefault then
         baseValue = minDefault
     end
-    local extraValue = MathUtils.mathRound(baseValue * getMutiplicationDegree(multiplierOption) * Weights.Ability)
+    local extraValue = MathUtils.mathRound(baseValue * getAdditionalStrengthMultiplier(multiplierOption) *
+        Weights.Ability)
     if RandomizerConfig.ConsoleDebug then
         print("Giving: " .. extraValue .. " " .. attributeName)
     end
@@ -684,8 +688,8 @@ end
 local function giveAcBoost(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.ACBoosts) then
         local baseAc = 10
-        local positiveValue = baseAc * getMutiplicationDegree(multiplierOption)
-        local negativeValue = baseAc * getMutiplicationDegree(multiplierOption)
+        local positiveValue = baseAc * getAdditionalStrengthMultiplier(multiplierOption)
+        local negativeValue = baseAc * getAdditionalStrengthMultiplier(multiplierOption)
         local extraAc = MathUtils.mathRound((positiveValue - negativeValue) * Weights.AC)
         BoostUtils.addBoostForCharWithPersistence("AC(" .. extraAc .. ")", charId)
     end
@@ -701,7 +705,8 @@ local function giveTemporaryHp(charId, multiplierOption, overrideChance)
         if not baseValue or baseValue < minDefault then
             baseValue = minDefault
         end
-        local extraValue = MathUtils.mathRound(baseValue * getMutiplicationDegree(multiplierOption) * Weights.TempHp)
+        local extraValue = MathUtils.mathRound(baseValue * getAdditionalStrengthMultiplier(multiplierOption) *
+            Weights.TempHp)
         if RandomizerConfig.ConsoleDebug then
             print("Giving: " .. extraValue .. " TemporaryHp")
         end
@@ -717,7 +722,7 @@ local function giveSpellSlots(charId, multiplierOption)
             -- SpellSlot curve, depending on character level
             local randomRange = (math.floor(((spellSlotLevel - 1) ^ 1.4 * 3) / charLevel) + 2) * 2
             local randomNumber = math.random(1, randomRange)
-            if randomNumber <= MathUtils.mathRound(getMutiplicationDegree(multiplierOption)) then
+            if randomNumber <= MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption)) then
                 local numberOfSpellSlots = MathUtils.mathRound(math.random(1, RandomizerConfig.Randomness) / 8.00 /
                     spellSlotLevel)
                 if RandomizerConfig.ConsoleDebug then
@@ -753,7 +758,7 @@ end
 local function giveSpells(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.NpcSpells) then
         local numSpellsToAdd = MathUtils.mathRound(
-            getMutiplicationDegree(multiplierOption) * math.max(1.0, modApi.GetLevel(charId) / 2.0)
+            getAdditionalStrengthMultiplier(multiplierOption) * math.max(1.0, modApi.GetLevel(charId) / 2.0)
         )
 
         -- Determine whether summon spells should be disallowed
@@ -782,31 +787,33 @@ end
 
 local function giveStatuses(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.Statuses) then
-        local numStatusesToAdd = MathUtils.mathRound(getMutiplicationDegree(multiplierOption) * 2.0)
+        local numStatusesToAdd = MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption) * 2.0)
         for i = 1, numStatusesToAdd do
             local statusToAdd = getRandomItemFromList(RandomizablesLists.Statuses)
             if RandomizerConfig.ConsoleDebug then
                 print("Giving status: " .. statusToAdd)
             end
-            modApi.ApplyStatus(charId, statusToAdd, MathUtils.mathRound(getMutiplicationDegree(multiplierOption) * 24))
+            modApi.ApplyStatus(charId, statusToAdd,
+                MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption) * 24))
         end
     end
 
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.Statuses) and RandomizerConfig.NegativeStatuses then
-        local numStatusesToAdd = MathUtils.mathRound(getMutiplicationDegree(multiplierOption) * 1.8)
+        local numStatusesToAdd = MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption) * 1.8)
         for i = 1, numStatusesToAdd do
             local statusToAdd = getRandomItemFromList(RandomizablesLists.NegativeStatuses)
             if RandomizerConfig.ConsoleDebug then
                 print("Giving negative status: " .. statusToAdd)
             end
-            modApi.ApplyStatus(charId, statusToAdd, MathUtils.mathRound(getMutiplicationDegree(multiplierOption) * 20))
+            modApi.ApplyStatus(charId, statusToAdd,
+                MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption) * 20))
         end
     end
 end
 
 local function givePassives(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.Passives) then
-        local numPassivesToAdd = MathUtils.mathRound(getMutiplicationDegree(multiplierOption) * 2)
+        local numPassivesToAdd = MathUtils.mathRound(getAdditionalStrengthMultiplier(multiplierOption) * 2)
         for i = 1, numPassivesToAdd do
             local passiveToAdd = getRandomItemFromList(RandomizablesLists.Passives)
             if RandomizerConfig.ConsoleDebug then
@@ -843,7 +850,7 @@ local function randomizeNpc(charId)
     givePassives(charId, eliteMultiplierOption)
 
     giveRandomEquipment(charId)
-    giveConsumables(charId)
+    giveConsumables(charId, eliteMultiplierOption)
 
     if (RandomizerConfig.ConsoleDebug) then
         print("=======================================================================")
