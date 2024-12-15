@@ -1242,7 +1242,7 @@ Ext.Osiris.RegisterListener("CastedSpell", 5, "after", function(casterId, spell,
         handlePartyMemberCastedSpellEvent(casterId, spell)
     elseif isRandomizedChar(casterId) then
         handleNpcCastedSpellEvent(casterId, spell)
-         -- Check for "_AI" suffix and rerun with stripped spell if necessary
+        -- Check for "_AI" suffix and rerun with stripped spell if necessary (ex. Target_MagicMissile_AI)
          if spell:sub(-3) == "_AI" then
             local originalSpell = spell:sub(1, -4) -- Remove "_AI" from the end
             if RandomizerConfig.ConsoleDebug then
