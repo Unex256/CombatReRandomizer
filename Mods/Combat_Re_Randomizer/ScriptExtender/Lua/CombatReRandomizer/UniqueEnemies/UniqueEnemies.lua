@@ -10,6 +10,7 @@ local RandomizerConfig = RandomizerConfigData.RandomizerConfig
 -- Utils
 local BoostUtils = Ext.Require("CombatReRandomizer/Utils/BoostUtils.lua")
 local MathUtils = Ext.Require("CombatReRandomizer/Utils/MathUtils.lua")
+local SpellUtils = Ext.Require("CombatReRandomizer/Utils/SpellUtils.lua")
 
 -- Json validator/converter
 local JsonConverter = Ext.Require("CombatReRandomizer/UniqueEnemies/JsonValidator.lua")
@@ -18,10 +19,14 @@ local UniqueEnemiesModule = {}
 
 local modApi = {}
 
+-- Persistence: Local lists
+local characterSpells = Persistence.characterSpells
+
 -- Set up BoostUtils with the wrapped modApi
 function UniqueEnemiesModule.initialize(wrappedModApi)
     modApi = wrappedModApi
     BoostUtils.initialize(wrappedModApi)
+    SpellUtils.initialize(wrappedModApi)
 end
 
 -- Define unique types with dictionary-based whitelist and blacklist
@@ -126,6 +131,15 @@ local function applyStatuses(charId, statuses)
         if status.type then
             local duration = (status.duration and status.duration * 6) or -1
             modApi.ApplyStatus(charId, status.type, duration)
+            if RandomizerConfig.ConsoleDebug then
+                local durationDebug
+                if duration < 0 then
+                    durationDebug = "Permament"
+                else
+                    durationDebug = duration .. " turns"
+                end
+                print("Applying status: " .. status.type .. " for: " .. durationDebug)
+            end
         end
     end
 end
@@ -140,7 +154,23 @@ end
         ]
 ]]
 local function giveSpells(charId, spells)
-    
+    for _, spellData in ipairs(spells) do
+        if spellData.spell then
+            if spellData.casts then
+                local spellCasts = SpellUtils.addSpellCastsToCharacter(charId, spellData.spell, spellData.casts)
+                if RandomizerConfig.ConsoleDebug then
+                    print("Spell: " .. spellData.spell .. " Current casts: " .. spellCasts)
+                end
+            else
+                SpellUtils.addSpellToCharacter(charId, spellData.spell)
+                if RandomizerConfig.ConsoleDebug then
+                    if RandomizerConfig.ConsoleDebug then
+                        print("Spell: " .. spellData.spell .. " Current casts: LOTS")
+                    end
+                end
+            end
+        end
+    end
 end
 
 -- Function to apply a single unique type (buffs, boosts etc.) to a character
@@ -232,9 +262,59 @@ function UniqueEnemiesModule.applyUniqueModifiers(charId)
     return currentUniques
 end
 
+local function validateSpellContainers(uniqueTypes)
+    for uniqueType, uniqueData in pairs(uniqueTypes) do
+        if uniqueData.spells then
+            local updatedSpells = {}
+            for _, spellData in ipairs(uniqueData.spells) do
+                local containerSpell = SpellUtils.getSpellContainer(spellData.spell)
+                if containerSpell and containerSpell ~= "" then
+                    -- Replace with container spell and retain casts
+                    table.insert(updatedSpells, {
+                        spell = containerSpell,
+                        casts = spellData.casts
+                    })
+                    if RandomizerConfig.ConsoleDebug then
+                        print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                              " was replaced with container spell: " .. containerSpell)
+                        print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                    end
+                else
+                    local rootSpell = SpellUtils.getRootSpell(spellData.spell)
+                    if rootSpell then
+                        -- Keep the root spell with its structure
+                        table.insert(updatedSpells, {
+                            spell = rootSpell,
+                            casts = spellData.casts
+                        })
+                        if RandomizerConfig.ConsoleExtraDebug then
+                            print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                                  " was replaced with root spell: " .. rootSpell)
+                            print("If this is unexpected, please adjust CombatReRandomizerUniques.json")
+                        end
+                    else
+                        -- Keep the original spell as a fallback
+                        table.insert(updatedSpells, spellData)
+                        if RandomizerConfig.ConsoleExtraDebug then
+                            print("Spell: " .. spellData.spell .. " in unique type: " .. uniqueType ..
+                                  " was kept unchanged.")
+                        end
+                    end
+                end
+            end
+            -- Update the spells for the unique type
+            uniqueTypes[uniqueType].spells = updatedSpells
+        end
+    end
+    return uniqueTypes
+end
+
+
+
+
 function UniqueEnemiesModule.parseUniques(uniquesJson)
     local uniqueTypes = JsonConverter(uniquesJson)
-
+    uniqueTypes = validateSpellContainers(uniqueTypes)
     -- Assign to UniqueTypes if it is successfully converted
     if uniqueTypes then
         UniqueTypes = uniqueTypes
