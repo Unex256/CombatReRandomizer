@@ -34,16 +34,6 @@ local unprocessedItemTemplates = {}
 -- Wrapped Api methods
 local modApi = {}
 
--- Persistence: Local lists
-local randomizedNpcs = Persistence.randomizedNpcs
-local characterItems = Persistence.characterItems
-local characterBoosts = Persistence.characterBoosts
-local characterSpells = Persistence.characterSpells
-local spellsAddedToParty = Persistence.spellsAddedToParty
-local combatVisitors = Persistence.combatVisitors
-local namePrefixes = Persistence.namePrefixes
-local uniqueProperties = Persistence.uniqueProperties
-
 -- Persistence: Modvars
 local reRandomizerUUID = "28040579-aead-4e01-aa9c-6371ab131e9d";
 Ext.Vars.RegisterModVariable(reRandomizerUUID, "randomized_npcs", {});   -- Randomized npcs tracker.
@@ -55,8 +45,20 @@ Ext.Vars.RegisterModVariable(reRandomizerUUID, "combat_visitors", {});   -- Part
 Ext.Vars.RegisterModVariable(reRandomizerUUID, "name_prefixes", {});     -- Added name prefixes.
 Ext.Vars.RegisterModVariable(reRandomizerUUID, "unique_properties", {}); -- Characters with unique properties.
 
+-- Persistence: Local lists for ease of use (only assign after getModvars initializes)
+local randomizedNpcs
+local characterItems
+local characterBoosts
+local characterSpells
+local spellsAddedToParty
+local combatVisitors
+local namePrefixes
+local uniqueProperties
+
+local modvars
+
 local function getModvars()
-    local modvars = Ext.Vars.GetModVariables(reRandomizerUUID)
+    modvars = Ext.Vars.GetModVariables(reRandomizerUUID)
     local keys = {
         "randomized_npcs",
         "character_items",
@@ -68,13 +70,52 @@ local function getModvars()
         "unique_properties"
     }
 
+    -- Ensure all modvars keys are initialized to a table
     for _, key in ipairs(keys) do
         if modvars[key] == nil then
             modvars[key] = {}
         end
     end
 
-    return modvars
+    -- Assign base values to Persistence
+    Persistence.randomizedNpcs = modvars.randomized_npcs
+    Persistence.characterItems = modvars.character_items
+    Persistence.characterBoosts = modvars.character_boosts
+    Persistence.characterSpells = modvars.character_spells
+    Persistence.spellsAddedToParty = modvars.party_spells
+    Persistence.combatVisitors = modvars.combat_visitors
+    Persistence.namePrefixes = modvars.name_prefixes
+    Persistence.uniqueProperties = modvars.unique_properties
+
+    -- Assign local references
+    randomizedNpcs = Persistence.randomizedNpcs
+    characterItems = Persistence.characterItems
+    characterBoosts = Persistence.characterBoosts
+    characterSpells = Persistence.characterSpells
+    spellsAddedToParty = Persistence.spellsAddedToParty
+    combatVisitors = Persistence.combatVisitors
+    namePrefixes = Persistence.namePrefixes
+    uniqueProperties = Persistence.uniqueProperties
+end
+
+local function persistAllData()
+    modvars.randomized_npcs = Persistence.randomizedNpcs
+    modvars.character_items = Persistence.characterItems
+    modvars.character_boosts = Persistence.characterBoosts
+    modvars.character_spells = Persistence.characterSpells
+    modvars.party_spells = Persistence.spellsAddedToParty
+    modvars.combat_visitors = Persistence.combatVisitors
+    modvars.name_prefixes = Persistence.namePrefixes
+    modvars.unique_properties = Persistence.uniqueProperties
+end
+
+local function persistItemData()
+    modvars.character_items = Persistence.characterItems
+end
+
+local function persistPartyData()
+    modvars.party_spells = Persistence.spellsAddedToParty
+    modvars.combat_visitors = Persistence.combatVisitors
 end
 
 local function parseGuid(string)
@@ -262,18 +303,11 @@ end
 
 local function onSessionLoaded()
     print("CombatReRandomizer ver. 0.7.1 initialization")
+    getModvars()
     ApiWrapper.initializeModApi(modApi)
     BoostUtils.initialize(modApi)
     SpellUtils.initialize(modApi)
     UniqueEnemiesModule.initialize(modApi)
-
-    local modvars = getModvars()
-    randomizedNpcs = modvars.randomized_npcs
-    characterItems = modvars.character_items
-    characterBoosts = modvars.character_boosts
-    combatVisitors = modvars.combat_visitors
-    namePrefixes = modvars.name_prefixes
-    spellsAddedToParty = modvars.party_spells
 
     getConfigFromFile()
     getModdedStuffFromFile()
@@ -942,27 +976,20 @@ Ext.Osiris.RegisterListener("PingRequested", 1, "after", function(_)
 end)
 
 local function handleDiedEventForRandomizedChar(charId)
-    local modvars = getModvars()
-
     if (RandomizerConfig.ConsoleDebug) then
         print("=======================================================================")
         print("Randomized charecter is dead: " .. parseStringFromGuid(charId))
     end
 
     removeRandomizedItems(charId)
-    modvars.character_items = characterItems
     removeCharFromRandomizedNpcs(charId)
-    modvars.randomized_npcs = randomizedNpcs
     removeCharacterFromBoostsList(charId)
-    modvars.character_boosts = characterBoosts
     removeCharacterFromCharacterSpells(charId)
-    modvars.character_spells = characterSpells
     removeCharacterFromDisplayNamesList(charId)
-    modvars.name_prefixes = namePrefixes
     removeCharacterFromUnprocessedItemTemplates(charId)
     removeCharacterFromUniquePropertiesList(charId)
-    modvars.unique_properties = uniqueProperties
 
+    persistAllData()
 
     if (RandomizerConfig.ConsoleDebug) then
         print("=======================================================================")
@@ -995,14 +1022,11 @@ Ext.Osiris.RegisterListener("DownedChanged", 2, "after", function(downedCharId, 
 end)]]
 
 local function handleTemplateAddedToEventForRandomizedChar(templateId, itemId, charId)
-    local modvars = getModvars()
-
     if modApi.IsEquipable(itemId) then
         fullyEquipItemForChar(itemId, charId)
     end
     addItemToCharacterItemList(itemId, charId)
-
-    modvars.character_items = characterItems
+    persistItemData()
 end
 
 Ext.Osiris.RegisterListener("TemplateAddedTo", 4, "after", function(templateId, itemId, charId, addType)
@@ -1037,39 +1061,23 @@ end
 
 local function handlePartyMemberEnteredCombatEvent(charId, combatId)
     if not partyMamberHasVisitedCombat(charId, combatId) then
-        local modvars = getModvars()
+        addPartyMemeberAsCombatVisitor(charId, combatId)
+        randomizePartyMember(charId)
 
         -- Debug to see randomization first hand (or just mess around)
         if RandomizerConfig.ActAsNpcDebug and not isRandomizedChar(charId) then
             randomizeNpc(charId)
-
-            modvars.randomized_npcs = randomizedNpcs
-            modvars.character_items = characterItems
-            modvars.character_boosts = characterBoosts
-            modvars.character_spells = characterSpells
-            modvars.name_prefixes = namePrefixes
-            modvars.unique_properties = uniqueProperties
+            persistAllData()
+        else
+            persistPartyData()
         end
-
-        addPartyMemeberAsCombatVisitor(charId, combatId)
-        modvars.combat_visitors = combatVisitors
-        randomizePartyMember(charId)
-        modvars.party_spells = spellsAddedToParty
     end
 end
 
 local function handleNpcEnteredCombatEvent(charId, combatId)
     if not isRandomizedChar(charId) then
-        local modvars = getModvars()
-
         randomizeNpc(charId)
-
-        modvars.character_items = characterItems
-        modvars.character_boosts = characterBoosts
-        modvars.character_spells = characterSpells
-        modvars.randomized_npcs = randomizedNpcs
-        modvars.name_prefixes = namePrefixes
-        modvars.unique_properties = uniqueProperties
+        persistAllData()
     else
         giveStatuses(charId)
     end
@@ -1097,9 +1105,8 @@ Ext.Osiris.RegisterListener("EnteredCombat", 2, "after", function(charId, combat
 end)
 
 local function handlePartyMemberLeftCombatEvent(charId)
-    local modvars = getModvars()
     removeGivenSpellsFromPartyMember(charId)
-    modvars.party_spells = spellsAddedToParty
+    persistPartyData()
 end
 
 Ext.Osiris.RegisterListener("LeftCombat", 2, "after", function(charId, combatId)
@@ -1115,9 +1122,7 @@ local function clearCombatVisitors(combatId)
 end
 
 Ext.Osiris.RegisterListener("CombatEnded", 1, "after", function(combatId)
-    local modvars = getModvars()
     clearCombatVisitors(combatId)
-    modvars.combat_visitors = combatVisitors
 end)
 
 
@@ -1171,6 +1176,7 @@ local function removeSpellCastFromPartyMemberWithLogging(spell, charId)
                     spell .. ", after limited casts for character: " .. parseStringFromGuid(charId))
             end
         end
+        persistAllData()
     end
 end
 
@@ -1193,43 +1199,37 @@ local function removeSpellCastFromCharacter(spell, charId)
     end
 end
 
-
 local function handlePartyMemberCastedSpellEvent(charId, spell)
     local proccesingNeeded = true
     if RandomizerConfig.RandomSpellToPartySingleCast then
         if isGivenSpellForPartyMember(spell, charId) then
-            local modvars = getModvars()
             removeSpellCastFromPartyMemberWithLogging(spell, charId)
             proccesingNeeded = false
-            modvars.party_spells = spellsAddedToParty
+            persistPartyData()
         else
             local containerSpell = SpellUtils.getSpellContainer(spell)
             if containerSpell and containerSpell ~= "" then
-                local modvars = getModvars()
                 removeSpellCastFromPartyMemberWithLogging(containerSpell, charId)
                 proccesingNeeded = false
-                modvars.party_spells = spellsAddedToParty
+                persistPartyData()
             end
         end
     end
     if proccesingNeeded and RandomizerConfig.ActAsNpcDebug and isGivenSpell(spell, charId) then
-        local modvars = getModvars()
         removeSpellCastFromCharacter(spell, charId)
-        modvars.character_spells = characterSpells
+        persistAllData()
     end
 end
 
 local function handleNpcCastedSpellEvent(charId, spell)
     if isGivenSpell(spell, charId) then
-        local modvars = getModvars()
         removeSpellCastFromCharacter(spell, charId)
-        modvars.character_spells = characterSpells
+        persistAllData()
     else
         local containerSpell = SpellUtils.getSpellContainer(spell)
         if containerSpell and containerSpell ~= "" then
-            local modvars = getModvars()
             removeSpellCastFromCharacter(containerSpell, charId)
-            modvars.character_spells = characterSpells
+            persistAllData()
         end
     end
 end
