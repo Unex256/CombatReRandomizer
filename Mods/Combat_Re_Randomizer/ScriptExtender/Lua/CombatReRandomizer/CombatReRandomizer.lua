@@ -766,10 +766,10 @@ local function giveSpells(charId, multiplierOption)
         for i = 1, numSpellsToAdd do
             local randomSpell = getValidSpell(disallowSummonSpells)
             if randomSpell then
-                SpellUtils.addSpellCastToCharacter(charId, randomSpell)
+                local casts = SpellUtils.addSpellCastToCharacter(charId, randomSpell)
                 if RandomizerConfig.ConsoleDebug then
                     print("Giving spell to: " .. parseStringFromGuid(charId) ..
-                        " spell: " .. randomSpell .. " (casts left: " .. characterSpells[charId][randomSpell] .. ")")
+                        " spell: " .. randomSpell .. " (casts left: " .. casts .. ")")
                 end
             else
                 if RandomizerConfig.ConsoleExtraDebug then
@@ -856,21 +856,10 @@ end
 
 -- Helper function: Add or increment spell casts
 local function addOrIncrementSpell(charId, spell)
-    if not spellsAddedToParty[charId] then
-        spellsAddedToParty[charId] = {}
-    end
-    if spellsAddedToParty[charId][spell] then
-        -- Increment casts left if the spell is already added
-        spellsAddedToParty[charId][spell] = spellsAddedToParty[charId][spell] + 1
-    else
-        -- Add new spell with 1 cast
-        spellsAddedToParty[charId][spell] = 1
-        modApi.AddSpell(charId, spell)
-    end
-
+    local casts = SpellUtils.addSpellCastToPartyMember(charId, spell)
     if RandomizerConfig.ConsoleDebug then
         print("Adding spell to: " .. parseStringFromGuid(charId) ..
-            " spell: " .. spell .. " (casts left: " .. spellsAddedToParty[charId][spell] .. ")")
+            " spell: " .. spell .. " (casts left: " .. casts .. ")")
     end
 end
 
@@ -1243,7 +1232,7 @@ Ext.Osiris.RegisterListener("CastedSpell", 5, "after", function(casterId, spell,
     elseif isRandomizedChar(casterId) then
         handleNpcCastedSpellEvent(casterId, spell)
         -- Check for "_AI" suffix and rerun with stripped spell if necessary (ex. Target_MagicMissile_AI)
-         if spell:sub(-3) == "_AI" then
+        if spell:sub(-3) == "_AI" then
             local originalSpell = spell:sub(1, -4) -- Remove "_AI" from the end
             if RandomizerConfig.ConsoleDebug then
                 print("Detected _AI suffix. Rerunning with spell: ", originalSpell)
