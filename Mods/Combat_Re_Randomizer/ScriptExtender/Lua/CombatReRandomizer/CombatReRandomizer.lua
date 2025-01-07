@@ -1134,10 +1134,10 @@ Ext.Osiris.RegisterListener("AttackedBy", 7, "after", function(targetId, attacke
                     local remainingDamage = extraDmg
                     while (remainingDamage > 0) do
                         if (remainingDamage > 25000) then
-                            modApi.ApplyDamage(targetId, 25000, damageType)
+                            modApi.ApplyDamage(targetId, 25000, damageType, attackerId)
                             remainingDamage = remainingDamage - 25000
                         else
-                            modApi.ApplyDamage(targetId, remainingDamage, damageType)
+                            modApi.ApplyDamage(targetId, remainingDamage, damageType, attackerId)
                             remainingDamage = 0
                         end
                     end
