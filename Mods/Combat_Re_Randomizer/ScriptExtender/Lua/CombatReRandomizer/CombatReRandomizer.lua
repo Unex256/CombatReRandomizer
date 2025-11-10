@@ -660,7 +660,6 @@ end
 -- Handles diminishing returns logic for a single batch of added points
 local function applyDiminishingReturns(rawPoints)
     local thresholds = RandomizerConfig.DiminishingAbilityThresholds
-    _P(thresholds)
     if not thresholds or #thresholds == 0 then
         return rawPoints
     end
