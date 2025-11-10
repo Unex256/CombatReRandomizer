@@ -29,13 +29,22 @@ Data.RandomizerConfig = {
     ConsoleExtraDebug = false,
 }
 
+
+local sortableKeys = {
+    DiminishingAbilityThresholds = true,
+}
+
 -- Assigns new configuration values from a JSON-like table
 function Data.assignRandomizerConfigValues(configJson)
     for key, value in pairs(configJson) do
         if Data.RandomizerConfig[key] ~= nil then
+            if sortableKeys[key] and type(value) == "table" then
+                table.sort(value)
+            end
             Data.RandomizerConfig[key] = value
         end
     end
 end
+
 
 return Data
