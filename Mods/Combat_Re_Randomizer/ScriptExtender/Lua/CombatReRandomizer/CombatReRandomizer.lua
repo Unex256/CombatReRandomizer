@@ -657,6 +657,38 @@ local function giveResourceBoosts(charId, multiplierOption)
     end
 end
 
+-- Handles diminishing returns logic for a single batch of added points
+local function applyDiminishingReturns(rawPoints)
+    local thresholds = RandomizerConfig.DiminishingAbilityThresholds
+    if not thresholds or #thresholds == 0 then
+        return rawPoints
+    end
+    local remaining = rawPoints
+    local gained = 0
+    local costTier = 1
+    local nextThresholdIndex = 1
+    local nextThreshold = thresholds[nextThresholdIndex]
+
+    while remaining > 0 do
+        -- Move to next cost tier when passing threshold
+        if nextThreshold and gained >= nextThreshold then
+            costTier = costTier + 1
+            nextThresholdIndex = nextThresholdIndex + 1
+            nextThreshold = thresholds[nextThresholdIndex]
+        end
+
+        local availableInTier = (nextThreshold and (nextThreshold - gained)) or math.huge
+        local affordable = math.floor(remaining / costTier)
+        if affordable <= 0 then break end
+
+        local toGain = math.min(availableInTier, affordable)
+        gained = gained + toGain
+        remaining = remaining - toGain * costTier
+    end
+
+    return gained
+end
+
 -- Generalized function to handle giving abilities/attributes
 local function giveAbilities(charId, attributeName, multiplierOption)
     local minDefault = 3
@@ -667,14 +699,24 @@ local function giveAbilities(charId, attributeName, multiplierOption)
     if not baseValue or baseValue < minDefault then
         baseValue = minDefault
     end
-    local extraValue = MathUtils.mathRound(baseValue * getAdditionalStrengthMultiplier(multiplierOption) *
-        Weights.Ability)
-    if RandomizerConfig.ConsoleDebug then
+
+    local extraValue = MathUtils.mathRound(baseValue * getAdditionalStrengthMultiplier(multiplierOption) * Weights.Ability)
+    local effectiveGain = extraValue
+
+    if RandomizerConfig.DiminishingAbilityReturns then
+        effectiveGain = applyDiminishingReturns(extraValue)
+        if RandomizerConfig.ConsoleDebug then
+            print(string.format(
+                "Applying diminishing returns: %d raw → %d effective (%s)",
+                extraValue, effectiveGain, attributeName
+            ))
+        end
+    elseif RandomizerConfig.ConsoleDebug then
         print("Giving: " .. extraValue .. " " .. attributeName)
     end
-    BoostUtils.addBoostForCharWithPersistence("Ability(" .. attributeName .. ",+" .. extraValue .. ")", charId)
-end
 
+    BoostUtils.addBoostForCharWithPersistence("Ability(" .. attributeName .. ",+" .. effectiveGain .. ")", charId)
+end
 
 local function giveAbilityBoosts(charId, multiplierOption)
     -- Abilities

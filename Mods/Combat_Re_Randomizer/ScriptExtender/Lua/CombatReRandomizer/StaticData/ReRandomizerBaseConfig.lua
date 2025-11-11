@@ -10,6 +10,8 @@ local baseConfig = [[{
     "HealthBoosts": 50,
     "NpcsDropAddedItems": 10,
     "AbilityBoosts": 50,
+    "DiminishingAbilityReturns": true,
+    "DiminishingAbilityThresholds": [10, 20, 30],
     "ACBoosts": 33,
     "DamageBonus": 0,
     "Passives": 50,
