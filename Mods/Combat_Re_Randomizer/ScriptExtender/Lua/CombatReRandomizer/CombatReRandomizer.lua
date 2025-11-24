@@ -797,11 +797,15 @@ local function getValidSpell(disallowSummonSpells)
     return spell
 end
 
+local function calculateSpellAmount(charId, multiplierOption)
+    local levelFactor = math.max(1.0, modApi.GetLevel(charId) / 2.0)
+    local amount = getAdditionalStrengthMultiplier(multiplierOption) * levelFactor
+    return MathUtils.mathRound(math.min(amount, 8))
+end
+
 local function giveSpells(charId, multiplierOption)
     if MathUtils.isGreaterOrEqualThanRandom(RandomizerConfig.NpcSpells) then
-        local numSpellsToAdd = MathUtils.mathRound(
-            getAdditionalStrengthMultiplier(multiplierOption) * math.max(1.0, modApi.GetLevel(charId) / 2.0)
-        )
+        local numSpellsToAdd = calculateSpellAmount(charId, multiplierOption)
 
         -- Determine whether summon spells should be disallowed
         local disallowSummonSpells = modApi.IsSummon(charId)
