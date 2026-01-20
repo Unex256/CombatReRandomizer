@@ -1172,6 +1172,10 @@ Ext.Osiris.RegisterListener("AttackedBy", 7, "after", function(targetId, attacke
     if (RandomizerConfig.DamageBonus > 0 and isPartyMember(attackerId) and not (modApi.HasAppliedStatus(attackerId, "NON_LETHAL") or modApi.HasActiveStatus(attackerId, "NON_LETHAL"))) then
         if (modApi.IsEnemy(targetId, attackerId)) then
             local extraDmg = math.floor((amount * (RandomizerConfig.DamageBonus)) / 100)
+            local currentHp = modApi.GetHitpoints(targetId)
+            if (extraDmg >= currentHp) then
+                  extraDmg = currentHp - 1
+            end
             if RandomizerConfig.ConsoleExtraDebug then
                 print("Extra damage to deal:" .. extraDmg)
             end
