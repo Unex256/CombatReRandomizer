@@ -468,6 +468,19 @@ local function giveRandomEquipment(charId)
             addItemToCharacter(rndItemTemplate, charId)
         end
     end
+
+    for _, equipment in ipairs(equipmentList) do
+        local dropChance = RandomizerConfig.NpcLootGear *
+            ((uniqueProperties[charId] and uniqueProperties[charId].ItemDropMultiplier) or 1.0)
+        if MathUtils.isGreaterOrEqualThanRandom(dropChance) then
+            local rndItemTemplate = getRandomItemFromList(equipment.list)
+            modApi.TemplateAddTo(rndItemTemplate, charId, 1)
+
+            if RandomizerConfig.ConsoleDebug then
+                print("Gained loot: " .. rndItemTemplate .. " with a drop chance of " .. dropChance)
+            end
+        end
+    end
 end
 
 local function giveConsumables(charId, multiplierOption)
