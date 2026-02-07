@@ -1,6 +1,7 @@
 local baseConfig = [[{
     "Randomness": 90,
     "NpcEquipment": 75,
+    "NpcLootGear": 0.5,
     "NpcSpells": 50,
     "MaxNpcSpells": 5,
     "EnemiesOnly": false,

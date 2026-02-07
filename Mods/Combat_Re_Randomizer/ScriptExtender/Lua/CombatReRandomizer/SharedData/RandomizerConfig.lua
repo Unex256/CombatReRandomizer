@@ -3,6 +3,7 @@ local Data = {}
 Data.RandomizerConfig = {
     Randomness = 25,
     NpcEquipment = 50,
+    NpcLootGear = 0.5,
     NpcSpells = 50,
     MaxNpcSpells = 5,
     EnemiesOnly = false,
