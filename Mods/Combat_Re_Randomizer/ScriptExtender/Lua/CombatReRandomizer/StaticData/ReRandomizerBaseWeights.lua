@@ -10,7 +10,6 @@ local baseConfig = [[{
     "SuperEliteItemDropChance": 2.0,
     "UniquePowerScale": 1.0,
     "ConsumablesMultiplier": 2.0
-    ""
 }]]
 
 return baseConfig

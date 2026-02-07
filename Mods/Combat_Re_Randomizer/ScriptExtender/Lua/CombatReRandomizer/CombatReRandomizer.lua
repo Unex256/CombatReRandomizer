@@ -800,7 +800,7 @@ end
 local function calculateSpellAmount(charId, multiplierOption)
     local levelFactor = math.max(1.0, modApi.GetLevel(charId) / 2.0)
     local amount = getAdditionalStrengthMultiplier(multiplierOption) * levelFactor
-    return MathUtils.mathRound(math.min(amount, 8))
+    return MathUtils.mathRound(math.min(amount, RandomizerConfig.MaxNpcSpells))
 end
 
 local function giveSpells(charId, multiplierOption)

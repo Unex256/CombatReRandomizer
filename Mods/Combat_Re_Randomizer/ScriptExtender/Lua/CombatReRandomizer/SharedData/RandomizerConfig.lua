@@ -4,6 +4,7 @@ Data.RandomizerConfig = {
     Randomness = 25,
     NpcEquipment = 50,
     NpcSpells = 50,
+    MaxNpcSpells = 5,
     EnemiesOnly = false,
     ResourceBoosts = 50,
     Statuses = 50,
